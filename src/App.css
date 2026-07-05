@@ -1,0 +1,37 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+   overflow-x: hidden;
+   background-color:var(--primary-bg); 
+    color: #fff;
+}
+html {
+  overflow-x: hidden;
+}
+:root {
+  --primary-bg: #09090B;
+  --secondary-bg: #141319;
+  --tertiary-bg: #17171C;
+}
+/* used gradienty.codes website for teal gradient color */
+.sp-text{
+background-image: conic-gradient(at top, #0d9488, #99f6e4);
+background-clip: text;
+-webkit-background-clip: text;
+color: transparent;
+-webkit-text-fill-color: transparent;
+}
+.icon{
+  padding: 15px;
+  font-size: 20px;
+  border: 1px solid gray;
+  border-radius: 10px;
+  background-color: var(--secondary-bg);
+  cursor: pointer;
+};
