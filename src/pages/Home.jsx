@@ -139,6 +139,15 @@ const Home = () => {
   }), [theme]);
 
 
+  const resetUI = () => {
+  setCode("");
+  setOutputScreen(false);
+  setTab(1);
+  setPrompt("");
+  setFrameWork(null);
+  setIsNewTabOpen(false);
+};
+
   return (
 
     <div>
@@ -267,7 +276,10 @@ ${theme === "dark" ? "bg-[#17171C]" : "bg-gray-100"}`}>
                               <ImNewTab className="text-[22px]" />
                             </button>
 
-                            <button className="export w-[46px] h-[46px] rounded-xl border border-zinc-800 flex items-center justify-center transition-all duration-200 hover:bg-[#333] hover:border-zinc-400">
+                            <button
+                              onClick={resetUI}
+                              className="export w-[46px] h-[46px] rounded-xl border border-zinc-800 flex items-center justify-center transition-all duration-200 hover:bg-[#333] hover:border-zinc-400"
+                            >
                               <MdRefresh className="text-[24px]" />
                             </button>
 
