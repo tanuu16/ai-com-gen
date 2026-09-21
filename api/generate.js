@@ -14,7 +14,7 @@ export default async function handler(req, res) {
 
     if (!apiKey) {
       return res.status(500).json({
-        error: "GEMINI_API_KEY is missing. Check your Vercel environment variables.",
+        error: "GEMINI_API_KEY is missing.",
       });
     }
 
@@ -24,28 +24,40 @@ export default async function handler(req, res) {
       });
     }
 
-    let response;
+    const models = [
+      "gemini-3.8-flash",
+      "gemini-3.7-flash",
+      "gemini-3.6-flash",
+      "gemini-3.5-flash-lite",
+    ];
 
-    // Try up to 3 times for temporary Gemini errors
-    for (let attempt = 0; attempt < 3; attempt++) {
-      response = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": apiKey,
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
+    let lastError = null;
+
+    for (const model of models) {
+      console.log(`Trying Gemini model: ${model}`);
+
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-goog-api-key": apiKey,
+              },
+              body: JSON.stringify({
+                contents: [
                   {
-                    text: `You are an experienced web developer and UI/UX designer.
+                    parts: [
+                      {
+                        text: `You are an experienced web developer and UI/UX designer.
 
 Generate a UI component for: ${prompt}
 
-Framework to use: ${framework || "HTML + Tailwind CSS"}
+Framework to use: ${
+                          framework || "HTML + Tailwind CSS"
+                        }
 
 Requirements:
 - Clean, well-structured code
@@ -57,69 +69,98 @@ Requirements:
 - Smooth animations
 - Return only code
 - Return one complete HTML file`,
+                      },
+                    ],
                   },
                 ],
-              },
-            ],
-          }),
+              }),
+            }
+          );
+
+          const data = await response.json();
+
+          console.log(
+            `${model} attempt ${attempt + 1}: ${response.status}`
+          );
+
+          // SUCCESS
+          if (response.ok) {
+            const generatedText =
+              data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (!generatedText) {
+              return res.status(500).json({
+                error: "Gemini returned no generated code.",
+              });
+            }
+
+            console.log(`Success using ${model}`);
+
+            return res.status(200).json({
+              code: generatedText,
+            });
+          }
+
+          // Temporary error → retry
+          if (response.status === 503 || response.status === 429) {
+            lastError =
+              data?.error?.message ||
+              `Gemini returned ${response.status}`;
+
+            if (attempt === 0) {
+              console.log(
+                `${model} temporarily unavailable. Retrying...`
+              );
+
+              await new Promise((resolve) =>
+                setTimeout(resolve, 1500)
+              );
+
+              continue;
+            }
+
+            // Both attempts failed → move to next model
+            console.log(
+              `${model} unavailable. Trying next model...`
+            );
+
+            break;
+          }
+
+          // Permanent error → don't keep trying models
+          console.error(
+            `Gemini error from ${model}:`,
+            JSON.stringify(data, null, 2)
+          );
+
+          return res.status(response.status).json({
+            error:
+              data?.error?.message ||
+              "Gemini API request failed",
+          });
+
+        } catch (error) {
+          lastError = error?.message;
+
+          console.error(
+            `Error with ${model}:`,
+            error
+          );
+
+          // Try next attempt/model
         }
-      );
-
-      console.log(
-        `Gemini attempt ${attempt + 1}: status ${response.status}`
-      );
-
-      // If it is NOT a temporary error, don't retry
-      if (response.status !== 503 && response.status !== 429) {
-        break;
-      }
-
-      // If this was the last attempt, don't wait again
-      if (attempt < 2) {
-        const delay = 1000 * Math.pow(2, attempt);
-
-        console.log(
-          `Gemini temporarily unavailable. Retrying in ${delay}ms...`
-        );
-
-        await new Promise((resolve) =>
-          setTimeout(resolve, delay)
-        );
       }
     }
 
-    const data = await response.json();
+    // All models failed
+    console.error(
+      "All Gemini models failed:",
+      lastError
+    );
 
-    if (!response.ok) {
-      console.error("Gemini status:", response.status);
-      console.error(
-        "Gemini error:",
-        JSON.stringify(data, null, 2)
-      );
-
-      return res.status(response.status).json({
-        error:
-          data?.error?.message ||
-          "Gemini API request failed",
-      });
-    }
-
-    const generatedText =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!generatedText) {
-      console.error(
-        "No generated text:",
-        JSON.stringify(data, null, 2)
-      );
-
-      return res.status(500).json({
-        error: "Gemini returned no generated code",
-      });
-    }
-
-    return res.status(200).json({
-      code: generatedText,
+    return res.status(503).json({
+      error:
+        "Gemini is temporarily unavailable. Please try again in a few moments.",
     });
 
   } catch (error) {
