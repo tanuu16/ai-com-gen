@@ -38,26 +38,24 @@ export default async function handler(req, res) {
 
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        const response = await fetch(
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
             {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "x-goog-api-key": apiKey,
-              },
-              body: JSON.stringify({
-                contents: [
-                  {
-                    parts: [
-                      {
-                        text: `You are an experienced web developer and UI/UX designer.
+              text: `You are an experienced web developer and UI/UX designer.
 
 Generate a UI component for: ${prompt}
 
-Framework to use: ${
-                          framework || "HTML + Tailwind CSS"
-                        }
+Framework to use: ${framework || "HTML + Tailwind CSS"}
 
 Requirements:
 - Clean, well-structured code
@@ -69,13 +67,13 @@ Requirements:
 - Smooth animations
 - Return only code
 - Return one complete HTML file`,
-                      },
-                    ],
-                  },
-                ],
-              }),
-            }
-          );
+            },
+          ],
+        },
+      ],
+    }),
+  }
+);
 
           const data = await response.json();
 
