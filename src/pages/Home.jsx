@@ -55,7 +55,7 @@ const Home = () => {
       },
       body: JSON.stringify({
         prompt,
-       framework: frameWork?.value
+        framework: frameWork?.value,
       }),
     });
 
@@ -65,7 +65,16 @@ const Home = () => {
       throw new Error(data.error || "API request failed");
     }
 
-setCode(data.code);
+    if (!data?.code) {
+      throw new Error("No code was returned by the server");
+    }
+
+    const cleanCode = data.code
+      .replace(/^```(?:html)?\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+
+    setCode(cleanCode);
     setOutputScreen(true);
 
   } catch (error) {
@@ -75,8 +84,6 @@ setCode(data.code);
     setLoading(false);
   }
 }
-
-
 
 
  
