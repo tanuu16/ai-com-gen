@@ -44,40 +44,42 @@ const Home = () => {
     setTheme(prev => (prev === "dark" ? "light" : "dark"));
   };
 
-  function extractCode(response) {
-    const match = response.match(/```(?:\w+)?\n?([\s\S]*?)```/);
-    return match ? match[1].trim() : response.trim();
-  }
+ async function getResponse() {
+  try {
+    setLoading(true);
 
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt,
+       framework: frameWork?.value
+      }),
+    });
 
+    const data = await response.json();
 
-
-  async function getResponse() {
-    try {
-      setLoading(true);
-
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt,
-          frameWork: frameWork?.value,
-        }),
-      });
-
-      const data = await response.json();
-
-      setCode(extractCode(data.code));
-      setOutputScreen(true);
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      throw new Error(data.error || "API request failed");
     }
-  }
 
+setCode(data.code);
+    setOutputScreen(true);
+
+  } catch (error) {
+    console.error("Generation error:", error);
+    toast.error(error.message || "Something went wrong");
+  } finally {
+    setLoading(false);
+  }
+}
+
+
+
+
+ 
   const copyCode = async () => {
     try {
       await navigator.clipboard.writeText(code);
